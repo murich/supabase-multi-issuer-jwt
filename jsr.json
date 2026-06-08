@@ -1,0 +1,30 @@
+{
+  "name": "@murich/supabase-multi-issuer-jwt",
+  "version": "0.1.0",
+  "exports": {
+    ".": "./src/mod.ts",
+    "./cli": "./cli/mod.ts",
+    "./proxy": "./templates/jwt-proxy/index.ts"
+  },
+  "publish": {
+    "include": [
+      "src/",
+      "migrations/",
+      "templates/",
+      "cli/",
+      "README.md",
+      "LICENSE",
+      "deno.json",
+      "jsr.json"
+    ],
+    "exclude": [
+      "tests/",
+      "examples/",
+      "docs/",
+      "scripts/",
+      ".github/",
+      "node_modules/",
+      "npm/"
+    ]
+  }
+}

@@ -1,0 +1,59 @@
+# End-to-end example: depot-issuer mints RS256 JWTs and writes widgets to
+# shop-target (a local Supabase instance) via the proxy Edge Function.
+
+services:
+  # The target Supabase project. Uses the official `supabase/supabase` image
+  # which bundles Postgres, PostgREST, GoTrue, Storage, Realtime, Studio, and
+  # the Edge Functions runtime. Migrations and the rest function are bind-
+  # mounted from examples/shop-target/.
+  supabase-target:
+    image: supabase/supabase:latest
+    container_name: shop-target
+    ports:
+      - "54321:54321"
+      - "54322:54322"
+      - "54323:54323"
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      JWT_SECRET: ${SUPABASE_JWT_SECRET}
+      ANON_KEY: ${SUPABASE_ANON_KEY}
+      SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      SITE_URL: http://localhost:3000
+    volumes:
+      - ./shop-target/supabase/migrations:/supabase/migrations:ro
+      - ./shop-target/supabase/functions:/supabase/functions:ro
+      - ./shop-target/supabase/config.toml:/supabase/config.toml:ro
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - -f
+        - http://localhost:54321/rest/v1/
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks:
+      - example-net
+
+  # The example issuing service. Mints JWTs and writes a widget every 30s.
+  depot-issuer:
+    build:
+      context: ./depot-issuer
+    container_name: depot-issuer
+    depends_on:
+      supabase-target:
+        condition: service_healthy
+    environment:
+      ISSUER: depot-demo
+      TARGET_URL: http://supabase-target:54321
+      PRIVATE_KEY_PATH: /app/keys/depot-demo.key
+      SYNC_INTERVAL_MS: "30000"
+      SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+    volumes:
+      - ./keys:/app/keys:ro
+    networks:
+      - example-net
+
+networks:
+  example-net:
+    driver: bridge

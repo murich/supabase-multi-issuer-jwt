@@ -1,0 +1,48 @@
+{
+  "name": "@murich/supabase-multi-issuer-jwt",
+  "version": "0.1.0",
+  "description": "Federated multi-issuer JWT auth for Supabase — multiple services write to a shared Supabase with scoped permissions, no service_role sharing",
+  "license": "MIT",
+  "author": "murich",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/murich/supabase-multi-issuer-jwt.git"
+  },
+  "bugs": "https://github.com/murich/supabase-multi-issuer-jwt/issues",
+  "homepage": "https://github.com/murich/supabase-multi-issuer-jwt#readme",
+  "keywords": [
+    "supabase",
+    "jwt",
+    "postgrest",
+    "auth",
+    "federated-auth",
+    "microservices",
+    "rls",
+    "multi-tenant"
+  ],
+  "type": "module",
+  "main": "./npm/script/mod.js",
+  "module": "./npm/esm/mod.js",
+  "types": "./npm/types/mod.d.ts",
+  "exports": {
+    ".": {
+      "import": "./npm/esm/mod.js",
+      "require": "./npm/script/mod.js",
+      "types": "./npm/types/mod.d.ts"
+    }
+  },
+  "bin": {
+    "supabase-multi-issuer-jwt": "./npm/cli/mod.js"
+  },
+  "files": [
+    "npm/",
+    "migrations/",
+    "templates/",
+    "README.md",
+    "LICENSE"
+  ],
+  "dependencies": {
+    "jose": "^5.9.6",
+    "@supabase/supabase-js": "^2.45.0"
+  }
+}

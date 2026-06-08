@@ -1,0 +1,46 @@
+{
+  "name": "@murich/supabase-multi-issuer-jwt",
+  "version": "0.1.0",
+  "exports": {
+    ".": "./src/mod.ts",
+    "./cli": "./cli/mod.ts",
+    "./proxy": "./templates/jwt-proxy/index.ts"
+  },
+  "tasks": {
+    "test": "deno test -A --no-check tests/",
+    "test:unit": "deno test -A --no-check tests/sign.test.ts tests/verify.test.ts",
+    "lint": "deno lint src/ cli/ tests/ templates/",
+    "fmt": "deno fmt src/ cli/ tests/ templates/",
+    "fmt:check": "deno fmt --check src/ cli/ tests/ templates/",
+    "build:npm": "deno run -A scripts/build-npm.ts"
+  },
+  "imports": {
+    "jose": "npm:jose@^5.9.6",
+    "@supabase/supabase-js": "npm:@supabase/supabase-js@^2.45.0",
+    "@std/assert": "jsr:@std/assert@^1.0.6",
+    "@std/cli/parse-args": "jsr:@std/cli@^1.0.6/parse-args",
+    "@std/path": "jsr:@std/path@^1.0.6"
+  },
+  "publish": {
+    "include": [
+      "src/",
+      "migrations/",
+      "templates/",
+      "cli/",
+      "README.md",
+      "LICENSE",
+      "deno.json"
+    ],
+    "exclude": ["tests/", "examples/", "docs/", "scripts/", ".github/"]
+  },
+  "compilerOptions": {
+    "strict": true,
+    "lib": ["deno.window", "dom"]
+  },
+  "lint": {
+    "exclude": ["templates/", "examples/", "scripts/", "node_modules/", "npm/"]
+  },
+  "fmt": {
+    "exclude": ["node_modules/", "npm/"]
+  }
+}
