@@ -63,6 +63,9 @@ jobs:
           node-version: "20"
           registry-url: "https://registry.npmjs.org"
 
+      - name: Install dependencies
+        run: deno install --allow-scripts
+
       - name: Build npm package via dnt
         run: deno run -A scripts/build-npm.ts
 

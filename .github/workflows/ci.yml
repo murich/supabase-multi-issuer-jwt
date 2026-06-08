@@ -22,6 +22,9 @@ jobs:
         with:
           deno-version: v2.6.4
 
+      - name: Install dependencies
+        run: deno install --allow-scripts
+
       - name: Format check
         run: deno fmt --check
 
@@ -50,9 +53,13 @@ jobs:
           path: |
             ~/.cache/deno
             ~/.deno
+            node_modules
           key: ${{ runner.os }}-deno-${{ matrix.deno-version }}-${{ hashFiles('deno.json', 'deno.lock') }}
           restore-keys: |
             ${{ runner.os }}-deno-${{ matrix.deno-version }}-
+
+      - name: Install dependencies
+        run: deno install --allow-scripts
 
       - name: Run tests
         run: deno test -A --no-check tests/
@@ -75,6 +82,9 @@ jobs:
         with:
           node-version: "20"
           registry-url: "https://registry.npmjs.org"
+
+      - name: Install dependencies
+        run: deno install --allow-scripts
 
       - name: Build npm package via dnt
         run: deno run -A scripts/build-npm.ts
