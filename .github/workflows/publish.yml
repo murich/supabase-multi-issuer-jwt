@@ -48,6 +48,10 @@ jobs:
     name: Publish to npm
     runs-on: ubuntu-latest
     needs: publish-jsr
+    permissions:
+      # OIDC token used by npm Trusted Publishing — no NPM_TOKEN needed.
+      id-token: write
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -60,8 +64,13 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          # Node 22 ships npm >= 10.9; we upgrade to npm@latest below to
+          # guarantee >= 11.5.1 (required for Trusted Publishing).
+          node-version: "22"
           registry-url: "https://registry.npmjs.org"
+
+      - name: Upgrade npm to latest (Trusted Publishing needs >= 11.5.1)
+        run: npm install -g npm@latest
 
       - name: Install dependencies
         run: deno install --allow-scripts
@@ -69,11 +78,14 @@ jobs:
       - name: Build npm package via dnt
         run: deno run -A scripts/build-npm.ts
 
-      - name: Publish to npm
+      - name: Publish to npm via Trusted Publishing (OIDC)
+        # No NODE_AUTH_TOKEN: npm CLI detects the GitHub Actions OIDC token
+        # via id-token:write permission and exchanges it with npm registry.
+        # Requires a Trusted Publisher to be configured on
+        # https://www.npmjs.com/package/@murich/supabase-multi-issuer-jwt/access
+        # pointing at this repo + workflow file.
         working-directory: npm
         run: npm publish --access public --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   github-release:
     name: GitHub Release
