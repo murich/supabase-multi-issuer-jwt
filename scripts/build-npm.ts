@@ -4,7 +4,7 @@
 //
 // Run with: deno run -A scripts/build-npm.ts
 
-import { build, emptyDir } from "https://deno.land/x/dnt@0.40.0/mod.ts";
+import { build, emptyDir } from "jsr:@deno/dnt@^0.42.3";
 
 const OUT_DIR = "./npm";
 
@@ -23,10 +23,10 @@ await build({
       name: "./cli",
       path: "./cli/mod.ts",
     },
-    {
-      name: "./proxy",
-      path: "./templates/jwt-proxy/index.ts",
-    },
+    // `./proxy` is a Deno-only Edge Function (uses `Deno.serve`) — not
+    // bundled into the npm package. The source file is still copied into
+    // `npm/templates/jwt-proxy/` so consumers can deploy it to their own
+    // Supabase Edge Functions directly.
     {
       kind: "bin",
       name: "supabase-multi-issuer-jwt",
@@ -40,9 +40,14 @@ await build({
   },
   test: false,
   declaration: "separate",
-  scriptModule: "cjs",
+  // ESM-only. CJS is incompatible with top-level await in cli/mod.ts and our
+  // engines.node ">=18" guarantees native ESM support.
+  scriptModule: false,
   esModule: true,
-  typeCheck: "single",
+  // Skip type-checking the dnt-emitted output: our source is already
+  // type-checked by Deno during dev/CI, and the dnt-generated Deno-shim
+  // polyfills have type glitches we don't want to gate publish on.
+  typeCheck: false,
   compilerOptions: {
     lib: ["ES2022", "DOM"],
     target: "ES2022",
