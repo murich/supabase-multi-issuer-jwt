@@ -1,7 +1,4 @@
-import {
-  assert,
-  assertEquals,
-} from "@std/assert";
+import { assert, assertEquals } from "@std/assert";
 import * as jose from "jose";
 import { createJwtSwapProxy } from "../src/proxy.ts";
 import { __setClientFactoryForTests } from "../src/registry.ts";

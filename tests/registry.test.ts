@@ -1,8 +1,4 @@
-import {
-  assert,
-  assertEquals,
-  assertRejects,
-} from "@std/assert";
+import { assert, assertEquals, assertRejects } from "@std/assert";
 import {
   __setClientFactoryForTests,
   deactivateIssuer,

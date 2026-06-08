@@ -20,14 +20,29 @@ jobs:
       - name: Setup Deno
         uses: denoland/setup-deno@v1
         with:
-          deno-version: v2.x
+          deno-version: v2.6.4
+
+      - name: Cache Deno dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/deno
+            ~/.deno
+            node_modules
+          key: ${{ runner.os }}-deno-publish-${{ hashFiles('deno.json', 'deno.lock') }}
+
+      - name: Install dependencies
+        # deno publish runs a type-check that needs npm: dependencies resolved
+        # locally. Without this, jose / @supabase/supabase-js are unresolved
+        # and publish fails. See https://docs.deno.com/runtime/manual/tools/install
+        run: deno install --allow-scripts
 
       - name: Publish to JSR
         # JSR authenticates via the workflow's OIDC token when the repository
         # is linked to the JSR package — no secret is required.
         # If you have not linked the repo, run `deno publish` locally once to
         # claim the package and link the GitHub repo from the JSR dashboard.
-        run: deno publish
+        run: deno publish --allow-dirty
 
   publish-npm:
     name: Publish to npm
@@ -40,7 +55,7 @@ jobs:
       - name: Setup Deno
         uses: denoland/setup-deno@v1
         with:
-          deno-version: v2.x
+          deno-version: v2.6.4
 
       - name: Setup Node
         uses: actions/setup-node@v4

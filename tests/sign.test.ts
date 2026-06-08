@@ -1,9 +1,4 @@
-import {
-  assert,
-  assertEquals,
-  assertRejects,
-  assertThrows,
-} from "@std/assert";
+import { assert, assertEquals, assertRejects, assertThrows } from "@std/assert";
 import * as jose from "jose";
 import { parseDurationSeconds, signMultiIssuerJwt } from "../src/sign.ts";
 

@@ -12,11 +12,7 @@
  */
 
 import { parseArgs } from "@std/cli/parse-args";
-import {
-  dirname,
-  join,
-  resolve,
-} from "@std/path";
+import { dirname, join, resolve } from "@std/path";
 
 interface KeygenArgs {
   issuer: string;

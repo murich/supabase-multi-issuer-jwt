@@ -1,8 +1,4 @@
-import {
-  assert,
-  assertEquals,
-  assertRejects,
-} from "@std/assert";
+import { assert, assertEquals, assertRejects } from "@std/assert";
 import * as jose from "jose";
 import { verifyMultiIssuerJwt } from "../src/verify.ts";
 import { __setClientFactoryForTests } from "../src/registry.ts";
