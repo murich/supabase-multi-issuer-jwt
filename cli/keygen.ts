@@ -17,6 +17,7 @@ import { dirname, join, resolve } from "@std/path";
 interface KeygenArgs {
   issuer: string;
   out: string;
+  target: string;
   force: boolean;
   help: boolean;
 }
@@ -27,24 +28,26 @@ Usage:
   deno run -A cli/keygen.ts --issuer <name> --out <dir> [--force]
 
 Options:
-  --issuer <name>   Issuer identifier. Used as the filename stem and embedded
-                    in JWTs as the \`iss\` claim. Required.
+  --issuer <name>   Issuer identifier. Embedded in JWTs as the \`iss\` claim. Required.
+  --target <url>    Target Supabase URL. When provided, files are named
+                    <issuer>-<target-slug>.key/.pub, making it unambiguous
+                    which key belongs to which deployment. Recommended.
   --out <dir>       Directory to write keys into. Created if missing. Required.
   --force           Overwrite existing key files. Default: refuse.
   --help            Print this help and exit.
 
-Files written:
+Files written (with --target):
+  <out>/<issuer>-<target-slug>.key   PKCS8 PEM private key (mode 0600)
+  <out>/<issuer>-<target-slug>.pub   SPKI PEM public key
+
+Files written (without --target):
   <out>/<issuer>.key   PKCS8 PEM private key (mode 0600)
   <out>/<issuer>.pub   SPKI PEM public key
-
-Next step:
-  deno run -A cli/register.ts --target <supabase-url> --service-role <key> \\
-    --issuer <name> --public-key <out>/<issuer>.pub
 `;
 
 function parse(): KeygenArgs {
   const flags = parseArgs(Deno.args, {
-    string: ["issuer", "out"],
+    string: ["issuer", "out", "target"],
     boolean: ["force", "help"],
     default: { force: false, help: false },
     alias: { h: "help" },
@@ -57,7 +60,7 @@ function parse(): KeygenArgs {
   });
 
   if (flags.help) {
-    return { issuer: "", out: "", force: false, help: true };
+    return { issuer: "", out: "", target: "", force: false, help: true };
   }
 
   if (!flags.issuer || typeof flags.issuer !== "string") {
@@ -76,6 +79,7 @@ function parse(): KeygenArgs {
   return {
     issuer: flags.issuer,
     out: flags.out,
+    target: typeof flags.target === "string" ? flags.target : "",
     force: flags.force === true,
     help: false,
   };
@@ -122,6 +126,18 @@ async function writeFileSecret(
   }
 }
 
+function deriveTargetSlug(rawUrl: string): string {
+  try {
+    const host = new URL(rawUrl).hostname;
+    return host
+      .replace(/\.supabase\.co$/, "")
+      .replace(/[^A-Za-z0-9_-]/g, "-")
+      .slice(0, 40);
+  } catch {
+    return rawUrl.replace(/[^A-Za-z0-9_-]/g, "-").slice(0, 40);
+  }
+}
+
 async function main(): Promise<void> {
   let args: KeygenArgs;
   try {
@@ -140,8 +156,11 @@ async function main(): Promise<void> {
   const outDir = resolve(args.out);
   await ensureDir(outDir);
 
-  const privPath = join(outDir, `${args.issuer}.key`);
-  const pubPath = join(outDir, `${args.issuer}.pub`);
+  const stem = args.target
+    ? `${args.issuer}-${deriveTargetSlug(args.target)}`
+    : args.issuer;
+  const privPath = join(outDir, `${stem}.key`);
+  const pubPath = join(outDir, `${stem}.pub`);
 
   if (!args.force) {
     for (const p of [privPath, pubPath]) {
@@ -182,10 +201,14 @@ async function main(): Promise<void> {
 
   console.log(`Wrote private key: ${privPath} (mode 0600)`);
   console.log(`Wrote public key:  ${pubPath}`);
+  const targetArg = args.target ? `\n    --target ${args.target} \\` : " --target <supabase-url> \\";
   console.log("");
   console.log("Next: register the public key on the target Supabase:");
   console.log(
-    `  deno run -A cli/register.ts --target <supabase-url> --service-role <key> \\`,
+    `  npx supabase-multi-issuer-jwt register \\${targetArg}`,
+  );
+  console.log(
+    `    --service-role <service-role-key> \\`,
   );
   console.log(
     `    --issuer ${args.issuer} --public-key ${pubPath}`,

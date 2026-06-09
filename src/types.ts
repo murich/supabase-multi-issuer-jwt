@@ -49,7 +49,7 @@ export interface SignOptions {
   claims: Partial<MultiIssuerJwtClaims> & { sub: string };
   /**
    * Lifetime. Accepts duration strings ("5y", "30d", "1h") or seconds.
-   * Defaults to `"1h"`.
+   * Defaults to `"60s"`.
    */
   expiresIn?: string | number;
   /** Defaults to `"RS256"`. */

@@ -143,7 +143,7 @@ export async function signMultiIssuerJwt(opts: SignOptions): Promise<string> {
   }
 
   const algorithm: Algorithm = opts.algorithm ?? "RS256";
-  const lifetimeSec = parseDurationSeconds(opts.expiresIn ?? "1h");
+  const lifetimeSec = parseDurationSeconds(opts.expiresIn ?? "60s");
   const now = Math.floor(Date.now() / 1000);
 
   // Strip server-set claims from caller-supplied claims.

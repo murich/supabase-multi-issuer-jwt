@@ -69,6 +69,80 @@ Supabase JWT and applies RLS as usual.
 
 ---
 
+## Security model: per-target keys + short-lived tokens
+
+The strongest replay protection available without shared state comes from combining two conventions.
+
+**One keypair per consumer–target pair.** Each issuing service generates a separate keypair for each Supabase project it writes to. Service A writing to both `target-prod` and `target-staging` holds two private keys and registers the matching public key on each target independently.
+
+This cryptographically binds every JWT to a specific target. A token signed with `service-a-target-prod.key` cannot be replayed against `target-staging` because `target-staging`'s `jwt_public_keys` table only holds `service-a-target-staging.pub` — signature verification fails before any claim is read.
+
+**Short-lived per-call tokens.** Sign a fresh JWT immediately before each HTTP request with a short lifetime. The library default is `"60s"`. Together with per-target key binding:
+
+| Threat | Outcome |
+|--------|---------|
+| Cross-target replay | **Impossible** — wrong key, signature fails |
+| Within-target replay | Bounded to **≤ 60 s** — too short to exploit in practice |
+
+This eliminates the need for `jti` deduplication, which would require a shared consistent store (Redis, Postgres) reachable by every Edge Function instance. Per-target keys + 60 s expiry gives equivalent practical security with zero operational overhead.
+
+**Recommended key naming:**
+
+```
+keys/
+  service-a-prod-abc123.key    ← private, injected into Service A's secrets
+  service-a-prod-abc123.pub    ← registered on prod-abc123's jwt_public_keys
+  service-a-staging-xyz789.key
+  service-a-staging-xyz789.pub
+```
+
+**Setup for two targets:**
+
+```sh
+# Production target
+npx supabase-multi-issuer-jwt keygen \
+  --issuer service-a \
+  --target https://prod-abc123.supabase.co \
+  --out ./keys
+
+npx supabase-multi-issuer-jwt register \
+  --target https://prod-abc123.supabase.co \
+  --service-role "$PROD_SERVICE_ROLE" \
+  --issuer service-a \
+  --public-key ./keys/service-a-prod-abc123.pub
+
+# Staging target — different keypair, same issuer name
+npx supabase-multi-issuer-jwt keygen \
+  --issuer service-a \
+  --target https://staging-xyz789.supabase.co \
+  --out ./keys
+
+npx supabase-multi-issuer-jwt register \
+  --target https://staging-xyz789.supabase.co \
+  --service-role "$STAGING_SERVICE_ROLE" \
+  --issuer service-a \
+  --public-key ./keys/service-a-staging-xyz789.pub
+```
+
+**At call time:**
+
+```ts
+// Mint fresh before every request — defaults to 60 s.
+const token = await signMultiIssuerJwt({
+  privateKey: PROD_PRIVATE_KEY,   // target-specific key
+  issuer: "service-a",
+  claims: { sub: "worker-1", role: "widgets_writer" },
+});
+
+await fetch("https://prod-abc123.supabase.co/functions/v1/rest/widgets", {
+  method: "POST",
+  headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+  body: JSON.stringify(payload),
+});
+```
+
+---
+
 ## Quickstart
 
 ### 1. Install
@@ -122,12 +196,16 @@ RS256 tokens.
 ### 4. Generate a keypair for an issuing service
 
 ```sh
-npx supabase-multi-issuer-jwt keygen --issuer my-service --out ./keys
+npx supabase-multi-issuer-jwt keygen \
+  --issuer my-service \
+  --target https://your-project.supabase.co \
+  --out ./keys
 ```
 
-This writes `./keys/my-service.key` (private, PEM) and `./keys/my-service.pub`
-(public, PEM). Store the private key as a secret in the issuing service. The
-public key is registered on the target.
+Passing `--target` names the files after both the issuer and the target
+(`my-service-your-project.key` / `.pub`), making it unambiguous which key
+belongs to which deployment when you have multiple targets. Store the private key
+as a secret in the issuing service; the public key is registered on the target.
 
 ### 5. Register the public key on the target
 
@@ -158,7 +236,7 @@ const token = await signMultiIssuerJwt({
     sub: "depot-42",
     role: "widgets_writer",
   },
-  expiresIn: "1h",
+  expiresIn: "60s", // default — mint fresh before each call
 });
 
 const res = await fetch(

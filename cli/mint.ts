@@ -42,8 +42,8 @@ Options:
   --claims <json>        JSON object with claims. MUST include \`sub\`.
                          May include \`role\` and any custom claims your RLS
                          policies reference. Required.
-  --expires-in <dur>     Lifetime — duration string ("5y", "30d", "1h") or
-                         seconds. Default: "1h".
+  --expires-in <dur>     Lifetime — duration string ("60s", "5m", "1h") or
+                         seconds. Default: "60s". Mint a fresh token per call.
   --algorithm <alg>      Default: RS256.
   --help                 Print this help and exit.
 
@@ -63,7 +63,7 @@ function parse(): MintArgs {
   const flags = parseArgs(Deno.args, {
     string: ["private-key", "issuer", "claims", "expires-in", "algorithm"],
     boolean: ["help"],
-    default: { "expires-in": "1h", algorithm: "RS256", help: false },
+    default: { "expires-in": "60s", algorithm: "RS256", help: false },
     alias: { h: "help" },
     unknown: (key, _, value) => {
       if (typeof key === "string" && key.startsWith("-")) {
@@ -78,7 +78,7 @@ function parse(): MintArgs {
       privateKeyPath: "",
       issuer: "",
       claimsJson: "",
-      expiresIn: "1h",
+      expiresIn: "60s",
       algorithm: "RS256",
       help: true,
     };
@@ -91,7 +91,7 @@ function parse(): MintArgs {
   const claimsJson = typeof flags.claims === "string" ? flags.claims : "";
   const expiresIn = typeof flags["expires-in"] === "string"
     ? flags["expires-in"]
-    : "1h";
+    : "60s";
   const algorithm = typeof flags.algorithm === "string"
     ? flags.algorithm
     : "RS256";
