@@ -188,6 +188,7 @@ export async function verifyMultiIssuerJwt(
   try {
     verified = await jose.jwtVerify(jwt, key, {
       issuer: iss,
+      audience: opts.audience,
       algorithms: [row.algorithm],
       clockTolerance: opts.clockToleranceSec ?? 5,
     });

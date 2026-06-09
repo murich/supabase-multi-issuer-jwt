@@ -72,6 +72,11 @@ export interface VerifyOptions {
    * any issuer present in the registry is accepted.
    */
   allowedIssuers?: string[];
+  /**
+   * Optional expected audience. When set, the JWT `aud` claim must match.
+   * Accepts a single string or an array (any match accepted).
+   */
+  audience?: string | string[];
 }
 
 /** Result of a successful verification. */
@@ -114,6 +119,11 @@ export interface ProxyOptions {
   supabaseJwtSecret: string;
   /** Optional allowlist of issuers (passed through to verifyMultiIssuerJwt). */
   allowedIssuers?: string[];
+  /**
+   * Optional expected audience passed through to verifyMultiIssuerJwt.
+   * When set, inbound JWTs must carry a matching `aud` claim.
+   */
+  audience?: string | string[];
   /**
    * Optional path-prefix to strip from the inbound request before forwarding
    * to PostgREST. E.g. if the Edge Function is mounted at `/functions/v1/rest`

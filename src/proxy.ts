@@ -13,6 +13,14 @@ import { JwtVerificationError, type ProxyOptions } from "./types.ts";
 
 const DEFAULT_MOUNT_PATH = "/functions/v1/rest";
 
+const PRIVILEGED_ROLES = new Set([
+  "service_role",
+  "postgres",
+  "supabase_admin",
+  "supabase_replication_admin",
+  "supabase_read_only_user",
+]);
+
 const CORS_HEADERS: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, PUT, OPTIONS",
@@ -69,6 +77,11 @@ function stripHopHeaders(src: Headers): Headers {
     "proxy-connection",
     "te",
     "trailer",
+    "x-forwarded-for",
+    "x-forwarded-host",
+    "x-forwarded-proto",
+    "x-real-ip",
+    "forwarded",
   ]);
   const out = new Headers();
   src.forEach((v, k) => {
@@ -129,12 +142,22 @@ export function createJwtSwapProxy(
         supabaseUrl: opts.supabaseUrl,
         serviceRoleKey: opts.serviceRoleKey,
         allowedIssuers: opts.allowedIssuers,
+        audience: opts.audience,
       });
       claims = { ...result.claims };
+      if (typeof claims.role === "string" && PRIVILEGED_ROLES.has(claims.role)) {
+        return jsonResponse(401, { error: "role_not_allowed" });
+      }
     } catch (err) {
       if (err instanceof JwtVerificationError) {
-        const status = err.reason === "registry_unavailable" ? 503 : 401;
-        return jsonResponse(status, { error: err.reason });
+        if (err.reason === "registry_unavailable") {
+          return jsonResponse(503, { error: "registry_unavailable" });
+        }
+        const publicReason =
+          err.reason === "malformed" || err.reason === "expired" || err.reason === "not_yet_valid"
+            ? err.reason
+            : "unauthorized";
+        return jsonResponse(401, { error: publicReason });
       }
       return jsonResponse(500, {
         error: "internal_error",

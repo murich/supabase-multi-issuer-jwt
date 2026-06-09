@@ -76,11 +76,12 @@ async function handler(req: Request): Promise<Response> {
   const url = new URL(req.url);
   const iss = peekIssuer(req.headers.get("authorization"));
   const ts = new Date().toISOString();
-  console.log(`[${ts}] ${req.method} ${url.pathname} iss=${iss}`);
+  const safeIss = String(iss).replace(/[^\w\-.:/@ ]/g, "_").slice(0, 128);
+  console.log(`[${ts}] ${req.method} ${url.pathname} iss=${safeIss}`);
 
   if (req.method === "GET" && url.pathname.endsWith("/health")) {
     return new Response(
-      JSON.stringify({ ok: true, version: VERSION }),
+      JSON.stringify({ ok: true }),
       {
         status: 200,
         headers: { "content-type": "application/json; charset=utf-8" },
