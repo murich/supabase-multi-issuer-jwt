@@ -18,8 +18,6 @@
 
 import { createJwtSwapProxy } from "jsr:@murich/supabase-multi-issuer-jwt";
 
-const VERSION = "0.1.0";
-
 function requireEnv(name: string): string {
   const value = Deno.env.get(name);
   if (!value) {
