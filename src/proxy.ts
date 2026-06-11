@@ -21,29 +21,11 @@ const PRIVILEGED_ROLES = new Set([
   "supabase_read_only_user",
 ]);
 
-const CORS_HEADERS: Record<string, string> = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, PUT, OPTIONS",
-  "Access-Control-Allow-Headers":
-    "authorization, apikey, content-type, content-profile, accept-profile, prefer, range, x-client-info",
-  "Access-Control-Expose-Headers": "content-range, content-profile, prefer",
-  "Access-Control-Max-Age": "86400",
-};
-
-function jsonResponse(
-  status: number,
-  body: unknown,
-  extraHeaders?: HeadersInit,
-): Response {
-  const headers = new Headers({
-    "content-type": "application/json; charset=utf-8",
-    ...CORS_HEADERS,
+function jsonResponse(status: number, body: unknown): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json; charset=utf-8" },
   });
-  if (extraHeaders) {
-    const extra = new Headers(extraHeaders);
-    extra.forEach((v, k) => headers.set(k, v));
-  }
-  return new Response(JSON.stringify(body), { status, headers });
 }
 
 function buildForwardUrl(
@@ -92,18 +74,6 @@ function stripHopHeaders(src: Headers): Headers {
   return out;
 }
 
-function addCorsHeaders(res: Response): Response {
-  const headers = new Headers(res.headers);
-  for (const [k, v] of Object.entries(CORS_HEADERS)) {
-    if (!headers.has(k)) headers.set(k, v);
-  }
-  return new Response(res.body, {
-    status: res.status,
-    statusText: res.statusText,
-    headers,
-  });
-}
-
 export function createJwtSwapProxy(
   opts: ProxyOptions,
 ): (req: Request) => Promise<Response> {
@@ -135,10 +105,6 @@ export function createJwtSwapProxy(
   const hsSecret = new TextEncoder().encode(opts.supabaseJwtSecret);
 
   return async function handler(req: Request): Promise<Response> {
-    if (req.method === "OPTIONS") {
-      return new Response(null, { status: 204, headers: CORS_HEADERS });
-    }
-
     const auth = req.headers.get("authorization") ??
       req.headers.get("Authorization");
     if (!auth) {
@@ -234,6 +200,6 @@ export function createJwtSwapProxy(
       });
     }
 
-    return addCorsHeaders(upstream);
+    return upstream;
   };
 }

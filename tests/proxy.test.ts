@@ -105,21 +105,6 @@ function installFetchStub(
   };
 }
 
-Deno.test("createJwtSwapProxy: OPTIONS returns CORS preflight", async () => {
-  const handler = createJwtSwapProxy({
-    supabaseUrl: SUPABASE_URL,
-    serviceRoleKey: SERVICE_ROLE_KEY,
-    supabaseJwtSecret: HS_SECRET,
-  });
-  const res = await handler(
-    new Request("https://edge.example.com/functions/v1/rest/depots", {
-      method: "OPTIONS",
-    }),
-  );
-  assertEquals(res.status, 204);
-  assertEquals(res.headers.get("Access-Control-Allow-Origin"), "*");
-});
-
 Deno.test("createJwtSwapProxy: missing Authorization → 401 missing_authorization", async () => {
   const handler = createJwtSwapProxy({
     supabaseUrl: SUPABASE_URL,
@@ -226,8 +211,6 @@ Deno.test("createJwtSwapProxy: happy path — swaps RS256 → HS256, forwards to
     assertEquals(payload.iat, inboundClaims.iat);
     assertEquals(payload.exp, inboundClaims.exp);
 
-    // CORS headers on response
-    assertEquals(res.headers.get("Access-Control-Allow-Origin"), "*");
   } finally {
     stub.restore();
     resetRegistry();
