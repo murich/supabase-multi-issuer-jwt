@@ -1,6 +1,6 @@
 {
   "name": "@murich/supabase-multi-issuer-jwt",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "exports": {
     ".": "./src/mod.ts",
     "./cli": "./cli/mod.ts",
