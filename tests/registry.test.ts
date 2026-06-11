@@ -215,3 +215,58 @@ Deno.test("deactivateIssuer: surfaces DB errors", async () => {
     );
   });
 });
+
+// --- Cache tests (F-04) ---
+
+Deno.test("getPublicKey: second call returns cached row without hitting DB", async () => {
+  const state = freshState([makeRow({ issuer: "cache-hit-f04", public_key: "pem" })]);
+  await withFake(state, async () => {
+    const row1 = await getPublicKey({ supabaseUrl: URL, serviceRoleKey: KEY, issuer: "cache-hit-f04" });
+    const callsAfterFirst = state.calls.length;
+    assert(callsAfterFirst > 0, "expected DB calls on first fetch");
+
+    const row2 = await getPublicKey({ supabaseUrl: URL, serviceRoleKey: KEY, issuer: "cache-hit-f04" });
+    assertEquals(state.calls.length, callsAfterFirst, "expected no new DB calls on cache hit");
+    assertEquals(row1, row2);
+  });
+});
+
+Deno.test("registerPublicKey: evicts cache so next getPublicKey re-fetches from DB", async () => {
+  const state = freshState([makeRow({ issuer: "evict-on-register-f04", public_key: "old-pem" })]);
+  await withFake(state, async () => {
+    // Populate cache.
+    await getPublicKey({ supabaseUrl: URL, serviceRoleKey: KEY, issuer: "evict-on-register-f04" });
+    const callsAfterFirst = state.calls.length;
+
+    // Re-register (evicts cache entry).
+    await registerPublicKey({
+      supabaseUrl: URL,
+      serviceRoleKey: KEY,
+      issuer: "evict-on-register-f04",
+      publicKey: "new-pem",
+    });
+
+    // Next getPublicKey must hit DB again.
+    const row = await getPublicKey({ supabaseUrl: URL, serviceRoleKey: KEY, issuer: "evict-on-register-f04" });
+    assert(state.calls.length > callsAfterFirst, "expected new DB calls after cache eviction");
+    assertEquals(row!.public_key, "new-pem");
+  });
+});
+
+Deno.test("deactivateIssuer: evicts cache so next getPublicKey re-fetches from DB", async () => {
+  const state = freshState([makeRow({ issuer: "evict-on-deactivate-f04", public_key: "pem", is_active: true })]);
+  await withFake(state, async () => {
+    // Populate cache with active row.
+    const cached = await getPublicKey({ supabaseUrl: URL, serviceRoleKey: KEY, issuer: "evict-on-deactivate-f04" });
+    assertEquals(cached!.is_active, true);
+    const callsAfterFirst = state.calls.length;
+
+    // Deactivate (evicts cache).
+    await deactivateIssuer({ supabaseUrl: URL, serviceRoleKey: KEY, issuer: "evict-on-deactivate-f04" });
+
+    // Next getPublicKey must hit DB and see is_active=false.
+    const row = await getPublicKey({ supabaseUrl: URL, serviceRoleKey: KEY, issuer: "evict-on-deactivate-f04" });
+    assert(state.calls.length > callsAfterFirst, "expected new DB calls after cache eviction");
+    assertEquals(row!.is_active, false);
+  });
+});

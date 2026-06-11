@@ -10,6 +10,9 @@ import type { Algorithm, PublicKeyRow, RegisterOptions } from "./types.ts";
 
 const TABLE = "jwt_public_keys";
 
+const _keyCache = new Map<string, { row: PublicKeyRow; expiresAt: number }>();
+const KEY_CACHE_TTL_MS = 60_000;
+
 /** Factory hook — tests override this to inject a fake client. */
 type ClientFactory = (url: string, key: string) => SupabaseClient;
 let _factory: ClientFactory = (url, key) =>
@@ -25,6 +28,7 @@ let _factory: ClientFactory = (url, key) =>
 export function __setClientFactoryForTests(
   factory: ClientFactory | null,
 ): void {
+  _keyCache.clear();
   if (factory === null) {
     _factory = (url, key) =>
       createClient(url, key, {
@@ -77,6 +81,7 @@ export async function registerPublicKey(opts: RegisterOptions): Promise<void> {
   if (error) {
     throw new Error(`registerPublicKey: ${error.message}`);
   }
+  _keyCache.delete(opts.issuer);
 }
 
 /** Fetch a single issuer's row or null if absent. */
@@ -86,6 +91,11 @@ export async function getPublicKey(opts: {
   issuer: string;
 }): Promise<PublicKeyRow | null> {
   if (!opts.issuer) throw new Error("getPublicKey: issuer is required");
+  const now = Date.now();
+  const cached = _keyCache.get(opts.issuer);
+  if (cached && cached.expiresAt > now) {
+    return cached.row;
+  }
   const client = getClient(opts.supabaseUrl, opts.serviceRoleKey);
   const { data, error } = await client
     .from(TABLE)
@@ -96,7 +106,9 @@ export async function getPublicKey(opts: {
     throw new Error(`getPublicKey: ${error.message}`);
   }
   if (!data) return null;
-  return data as PublicKeyRow;
+  const row = data as PublicKeyRow;
+  _keyCache.set(opts.issuer, { row, expiresAt: now + KEY_CACHE_TTL_MS });
+  return row;
 }
 
 /** Return every row. Ordered by issuer ASC for stable output. */
@@ -130,4 +142,5 @@ export async function deactivateIssuer(opts: {
   if (error) {
     throw new Error(`deactivateIssuer: ${error.message}`);
   }
+  _keyCache.delete(opts.issuer);
 }
