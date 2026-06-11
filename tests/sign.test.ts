@@ -84,7 +84,7 @@ Deno.test("signMultiIssuerJwt: respects expiresIn as plain number (seconds)", as
   assertEquals((payload.exp as number) - (payload.iat as number), 120);
 });
 
-Deno.test("signMultiIssuerJwt: defaults to 1h when expiresIn omitted", async () => {
+Deno.test("signMultiIssuerJwt: defaults to 60s when expiresIn omitted", async () => {
   const { privatePem, publicPem } = await genRsaPem();
   const jwt = await signMultiIssuerJwt({
     privateKey: privatePem,
@@ -93,7 +93,7 @@ Deno.test("signMultiIssuerJwt: defaults to 1h when expiresIn omitted", async () 
   });
   const pubKey = await jose.importSPKI(publicPem, "RS256");
   const { payload } = await jose.jwtVerify(jwt, pubKey);
-  assertEquals((payload.exp as number) - (payload.iat as number), 3600);
+  assertEquals((payload.exp as number) - (payload.iat as number), 60);
 });
 
 Deno.test("signMultiIssuerJwt: caller-supplied iat/exp are stripped", async () => {

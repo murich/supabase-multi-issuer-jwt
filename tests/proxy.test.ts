@@ -293,7 +293,7 @@ Deno.test("createJwtSwapProxy: unknown issuer → 401 unknown_issuer", async () 
     );
     assertEquals(res.status, 401);
     const body = await res.json();
-    assertEquals(body.error, "unknown_issuer");
+    assertEquals(body.error, "unauthorized");
   } finally {
     resetRegistry();
   }
@@ -400,7 +400,7 @@ Deno.test("createJwtSwapProxy: rejects when allowedIssuers excludes inbound iss"
       }),
     );
     assertEquals(res.status, 401);
-    assertEquals((await res.json()).error, "issuer_not_allowed");
+    assertEquals((await res.json()).error, "unauthorized");
   } finally {
     resetRegistry();
   }
