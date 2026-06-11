@@ -116,6 +116,21 @@ export function createJwtSwapProxy(
   if (!opts.supabaseJwtSecret) {
     throw new Error("createJwtSwapProxy: supabaseJwtSecret is required");
   }
+  try {
+    const _u = new URL(opts.supabaseUrl);
+    if (_u.protocol !== "https:" && _u.protocol !== "http:") {
+      throw new Error(
+        `createJwtSwapProxy: supabaseUrl must use http or https, got "${_u.protocol}"`,
+      );
+    }
+  } catch (err) {
+    if (err instanceof Error && err.message.startsWith("createJwtSwapProxy:")) {
+      throw err;
+    }
+    throw new Error(
+      `createJwtSwapProxy: supabaseUrl is not a valid URL: "${opts.supabaseUrl}"`,
+    );
+  }
   const mountPath = opts.mountPath ?? DEFAULT_MOUNT_PATH;
   const hsSecret = new TextEncoder().encode(opts.supabaseJwtSecret);
 

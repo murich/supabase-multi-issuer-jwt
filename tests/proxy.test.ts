@@ -482,3 +482,59 @@ Deno.test("createJwtSwapProxy: 401 expired when token lifetime exceeds maxTokenL
     resetRegistry();
   }
 });
+
+// --- supabaseUrl validation tests (F-09) ---
+
+Deno.test("createJwtSwapProxy: throws on non-URL supabaseUrl", () => {
+  let threw = false;
+  try {
+    createJwtSwapProxy({
+      supabaseUrl: "not a url",
+      serviceRoleKey: SERVICE_ROLE_KEY,
+      supabaseJwtSecret: HS_SECRET,
+    });
+  } catch (err) {
+    threw = true;
+    assert(err instanceof Error);
+    assert(
+      err.message.includes("not a valid URL"),
+      `unexpected message: ${err.message}`,
+    );
+  }
+  assert(threw, "expected createJwtSwapProxy to throw");
+});
+
+Deno.test("createJwtSwapProxy: throws on non-http(s) supabaseUrl", () => {
+  let threw = false;
+  try {
+    createJwtSwapProxy({
+      supabaseUrl: "ftp://example.com",
+      serviceRoleKey: SERVICE_ROLE_KEY,
+      supabaseJwtSecret: HS_SECRET,
+    });
+  } catch (err) {
+    threw = true;
+    assert(err instanceof Error);
+    assert(
+      err.message.includes("must use http or https"),
+      `unexpected message: ${err.message}`,
+    );
+  }
+  assert(threw, "expected createJwtSwapProxy to throw");
+});
+
+Deno.test("createJwtSwapProxy: accepts https supabaseUrl without throwing", () => {
+  createJwtSwapProxy({
+    supabaseUrl: "https://example.supabase.co",
+    serviceRoleKey: SERVICE_ROLE_KEY,
+    supabaseJwtSecret: HS_SECRET,
+  });
+});
+
+Deno.test("createJwtSwapProxy: accepts http supabaseUrl without throwing", () => {
+  createJwtSwapProxy({
+    supabaseUrl: "http://localhost:54321",
+    serviceRoleKey: SERVICE_ROLE_KEY,
+    supabaseJwtSecret: HS_SECRET,
+  });
+});
