@@ -51,6 +51,7 @@ await build({
   compilerOptions: {
     lib: ["ES2022", "DOM"],
     target: "ES2022",
+    stripInternal: true,
   },
   package: {
     name: pkg.name,

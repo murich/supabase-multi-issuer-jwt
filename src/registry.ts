@@ -24,6 +24,7 @@ let _factory: ClientFactory = (url, key) =>
 /**
  * Test seam. Pass a factory to swap in a fake client; pass `null` to restore
  * the default. NOT part of the public API — name is prefixed and unstable.
+ * @internal
  */
 export function __setClientFactoryForTests(
   factory: ClientFactory | null,
