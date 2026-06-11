@@ -450,3 +450,35 @@ Deno.test("createJwtSwapProxy: 503 when registry is unavailable", async () => {
     resetRegistry();
   }
 });
+
+// --- maxTokenLifetimeSec proxy test (F-07) ---
+
+Deno.test("createJwtSwapProxy: 401 expired when token lifetime exceeds maxTokenLifetimeSec", async () => {
+  const { privatePem, publicPem } = await makeKeypairPems();
+  setupRegistry([makeRow({ issuer: "svc-proxy-maxlife-f07", public_key: publicPem })]);
+  try {
+    const now = Math.floor(Date.now() / 1000);
+    const jwt = await signRs256(privatePem, {
+      iss: "svc-proxy-maxlife-f07",
+      sub: "u",
+      iat: now,
+      exp: now + 3600,
+    });
+    const handler = createJwtSwapProxy({
+      supabaseUrl: SUPABASE_URL,
+      serviceRoleKey: SERVICE_ROLE_KEY,
+      supabaseJwtSecret: HS_SECRET,
+      maxTokenLifetimeSec: 60,
+    });
+    const res = await handler(
+      new Request("https://edge.example.com/functions/v1/rest/x", {
+        method: "GET",
+        headers: { Authorization: `Bearer ${jwt}` },
+      }),
+    );
+    assertEquals(res.status, 401);
+    assertEquals((await res.json()).error, "expired");
+  } finally {
+    resetRegistry();
+  }
+});

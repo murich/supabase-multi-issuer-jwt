@@ -287,3 +287,50 @@ Deno.test("verifyMultiIssuerJwt: respects clockToleranceSec for slightly-expired
     resetRegistry();
   }
 });
+
+// --- maxTokenLifetimeSec tests (F-07) ---
+
+Deno.test("verifyMultiIssuerJwt: rejects token whose remaining lifetime exceeds maxTokenLifetimeSec", async () => {
+  const { privatePem, publicPem } = await makeKeypairPems();
+  setupRegistry([makeRow({ issuer: "svc-maxlife-f07", public_key: publicPem })]);
+  try {
+    const now = Math.floor(Date.now() / 1000);
+    const jwt = await signWith(privatePem, {
+      iss: "svc-maxlife-f07",
+      sub: "u",
+      iat: now,
+      exp: now + 3600,
+    });
+    const err = await verifyMultiIssuerJwt(jwt, {
+      supabaseUrl: URL,
+      serviceRoleKey: KEY,
+      maxTokenLifetimeSec: 60,
+    }).catch((e) => e);
+    assert(err instanceof JwtVerificationError, "expected JwtVerificationError");
+    assertEquals(err.reason, "expired");
+  } finally {
+    resetRegistry();
+  }
+});
+
+Deno.test("verifyMultiIssuerJwt: accepts token within maxTokenLifetimeSec", async () => {
+  const { privatePem, publicPem } = await makeKeypairPems();
+  setupRegistry([makeRow({ issuer: "svc-maxlife-ok-f07", public_key: publicPem })]);
+  try {
+    const now = Math.floor(Date.now() / 1000);
+    const jwt = await signWith(privatePem, {
+      iss: "svc-maxlife-ok-f07",
+      sub: "u",
+      iat: now,
+      exp: now + 60,
+    });
+    const result = await verifyMultiIssuerJwt(jwt, {
+      supabaseUrl: URL,
+      serviceRoleKey: KEY,
+      maxTokenLifetimeSec: 120,
+    });
+    assertEquals(result.claims.iss, "svc-maxlife-ok-f07");
+  } finally {
+    resetRegistry();
+  }
+});

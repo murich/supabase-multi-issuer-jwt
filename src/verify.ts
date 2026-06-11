@@ -196,6 +196,17 @@ export async function verifyMultiIssuerJwt(
     throw mapJoseError(err);
   }
 
+  if (opts.maxTokenLifetimeSec !== undefined) {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const remaining = (verified.payload.exp ?? 0) - nowSec;
+    if (remaining > opts.maxTokenLifetimeSec) {
+      throw new JwtVerificationError(
+        "expired",
+        `verify: token lifetime ${remaining}s exceeds maximum allowed ${opts.maxTokenLifetimeSec}s`,
+      );
+    }
+  }
+
   return {
     claims: verified.payload as MultiIssuerJwtClaims,
     matchedKey: {

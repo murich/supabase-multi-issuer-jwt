@@ -143,6 +143,7 @@ export function createJwtSwapProxy(
         serviceRoleKey: opts.serviceRoleKey,
         allowedIssuers: opts.allowedIssuers,
         audience: opts.audience,
+        maxTokenLifetimeSec: opts.maxTokenLifetimeSec,
       });
       claims = { ...result.claims };
       if (typeof claims.role === "string" && PRIVILEGED_ROLES.has(claims.role)) {

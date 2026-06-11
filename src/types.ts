@@ -77,6 +77,13 @@ export interface VerifyOptions {
    * Accepts a single string or an array (any match accepted).
    */
   audience?: string | string[];
+  /**
+   * Optional maximum remaining lifetime in seconds. After signature verification
+   * succeeds, the token's remaining validity (exp − now) is checked against this
+   * value. Tokens that exceed it are rejected. Useful as a server-side ceiling
+   * when issuers cannot be fully trusted to use short expiries.
+   */
+  maxTokenLifetimeSec?: number;
 }
 
 /** Result of a successful verification. */
@@ -124,6 +131,10 @@ export interface ProxyOptions {
    * When set, inbound JWTs must carry a matching `aud` claim.
    */
   audience?: string | string[];
+  /**
+   * Optional maximum token lifetime in seconds passed through to verifyMultiIssuerJwt.
+   */
+  maxTokenLifetimeSec?: number;
   /**
    * Optional path-prefix to strip from the inbound request before forwarding
    * to PostgREST. E.g. if the Edge Function is mounted at `/functions/v1/rest`
